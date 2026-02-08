@@ -2,21 +2,27 @@ import os
 from sqlalchemy import create_engine, text, MetaData, Table, Column, Integer, String, DateTime, func
 from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
+from sshtunnel import SSHTunnelForwarder
 
+# Загружаем переменные окружения
+load_dotenv()
 
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME = os.getenv("DB_NAME")
 
-#
-LOCAL_HOST = "1f77efc1400c.vps.myjino.ru"
-LOCAL_PORT = "49288"
+# SSH параметры
+SSH_HOST = "1f77efc1400c.vps.myjino.ru"
+SSH_PORT = 49288
+SSH_USERNAME = os.getenv("SSH_USERNAME")
+SSH_PASSWORD = os.getenv("SSH_PASSWORD")
+LOCAL_PORT = 5432
 
+# Параметры БД на удаленном сервере
+REMOTE_DB_HOST = "localhost"
+REMOTE_DB_PORT = 5432
 
-DATABASE_URL = (
-    f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{LOCAL_HOST}:{LOCAL_PORT}/{DB_NAME}"
-)
-
+tunnel = None
 engine = None
 metadata = MetaData()
 
@@ -30,26 +36,48 @@ UsersTable = Table(
 
 
 def initialize_db():
-    global engine
+    global engine, tunnel
 
-    if not DATABASE_URL:
-        print("ОШИБКА: Параметры БД не найдены в окружении.")
+    if not all([DB_USER, DB_PASSWORD, DB_NAME, SSH_USERNAME, SSH_PASSWORD]):
+        print("ОШИБКА: Не все параметры подключения найдены в окружении.")
         return False
 
-    print(f"Попытка подключения к БД через SSH-туннель на {LOCAL_HOST}:{LOCAL_PORT}...")
+    print(f"Создание SSH-туннеля к {SSH_HOST}...")
 
     try:
+        # Простая конфигурация туннеля
+        tunnel = SSHTunnelForwarder(
+            ssh_address_or_host=(SSH_HOST, SSH_PORT),
+            ssh_username=SSH_USERNAME,
+            ssh_password=SSH_PASSWORD,
+            remote_bind_address=(REMOTE_DB_HOST, REMOTE_DB_PORT),
+            local_bind_address=('localhost', int(LOCAL_PORT))
+        )
+
+        # Запускаем туннель
+        tunnel.start()
+        print(f"SSH-туннель запущен. Локальный порт: {tunnel.local_bind_port}")
+
+        # Используем строку подключения
+        DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@localhost:{LOCAL_PORT}/{DB_NAME}"
+
+        # Создаем движок SQLAlchemy
         engine = create_engine(DATABASE_URL)
 
         with engine.connect() as connection:
             # Проверка соединения
             connection.execute(text("SELECT 1"))
-            print("УСПЕХ: Соединение с удаленной БД через туннель установлено.")
+            print("УСПЕХ: Соединение с удаленной БД через SSH-туннель установлено.")
             create_tables()
             return True
 
-    except SQLAlchemyError as e:
+    except Exception as e:
         print(f"КРИТИЧЕСКАЯ ОШИБКА при подключении к БД: {e}")
+        if tunnel:
+            try:
+                tunnel.close()
+            except:
+                pass
         engine = None
         return False
 
@@ -64,7 +92,6 @@ def create_tables():
 
 
 def save_user_if_new(user_id, username):
-    # ... (логика сохранения остается прежней)
     if engine:
         try:
             with engine.begin() as connection:
@@ -89,3 +116,19 @@ def save_user_if_new(user_id, username):
 
         except SQLAlchemyError as e:
             print(f"Ошибка при записи в БД: {e}")
+
+
+def close_connection():
+    """Функция для закрытия соединения"""
+    global engine, tunnel
+
+    if engine:
+        engine.dispose()
+        print("Соединение с БД закрыто.")
+
+    if tunnel:
+        try:
+            tunnel.close()
+            print("SSH-туннель остановлен.")
+        except:
+            pass
