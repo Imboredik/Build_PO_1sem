@@ -1,7 +1,7 @@
 import logging
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from config import BOT_TOKEN
-from handlers import start, cocktail
+from my_tg_bot.bot.config import BOT_TOKEN
+from my_tg_bot.bot.handlers import start, cocktail
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)  # Уровень DEBUG для больше логов
 

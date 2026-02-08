@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from api import get_random_cocktail
+from .api import get_random_cocktail
 from html import escape
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
