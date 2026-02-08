@@ -1,16 +1,32 @@
 import logging
+import os
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from my_tg_bot.bot.config import BOT_TOKEN
-from my_tg_bot.bot.handlers import start, cocktail
+from dotenv import load_dotenv  # Импортируем load_dotenv
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)  # Уровень DEBUG для больше логов
+# --- ВАЖНО: Загружаем .env ДО всего остального ---
+load_dotenv()
+# --------------------------------------------------
 
-def main():
+# Импорты обработчиков и инициализации
+from database import initialize_db
+from my_tg_bot.bot.handlers import start, cocktail  # Предполагается, что start и cocktail работают
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+
+
+def main() -> None:
+    # 1. Инициализация БД
+    if not initialize_db():
+        print("Не удалось инициализировать базу данных. Запуск бота может быть нестабильным.")
+
+    # 2. Получаем BOT_TOKEN из окружения
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
 
     try:
         print("Запуск main... Тестируем вывод.")
+
         if not BOT_TOKEN:
-            print("Ошибка: BOT_TOKEN не загружен! Проверьте .env.")
+            print("КРИТИЧЕСКАЯ ОШИБКА: BOT_TOKEN не загружен! Проверьте .env.")
             return
 
         print(f"Токен загружен: {BOT_TOKEN[:10]}... (первые символы для проверки)")
@@ -25,9 +41,11 @@ def main():
         print("Запуск polling...")
         application.run_polling()
         print("Polling завершён (это не должно выводиться, если polling работает).")
+
     except Exception as e:
         print(f"КРИТИЧЕСКАЯ ОШИБКА: {e}")
         raise
+
 
 if __name__ == '__main__':
     main()
