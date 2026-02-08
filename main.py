@@ -1,13 +1,10 @@
 import logging
 import os
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from dotenv import load_dotenv  # Импортируем load_dotenv
+from dotenv import load_dotenv
 
-# --- ВАЖНО: Загружаем .env ДО всего остального ---
 load_dotenv()
-# --------------------------------------------------
 
-# Импорты обработчиков и инициализации
 from database import initialize_db
 from my_tg_bot.bot.handlers import start, cocktail  # Предполагается, что start и cocktail работают
 
