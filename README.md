@@ -67,7 +67,7 @@ RPS (запросов в секунду): ~20 в пиковые часы
 3 секунды максимальное время: Пользователи Telegram ожидают быстрого ответа от ботов
 
 # Базы данных
-<img width="" height="" alt="image" src="" />
+<img alt="image" src="https://github.com/Imboredik/Build_PO_1sem/blob/main/%D0%A1%D0%BA%D1%80%D0%B8%D0%BD%D1%88%D0%BE%D1%82%2009-02-2026%20145459.jpg" />
 
 ## Обеспечение нефункциональных требований БД
 
@@ -146,3 +146,4 @@ docker-compose up --build -d
 
 Остановка:
 docker-compose down
+
